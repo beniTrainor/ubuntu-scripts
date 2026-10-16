@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+
+"""
+A CLI utility to rename files in bulk.
+
+Usage: ./bulkrename paths_or_base_directory
+
+The script takes as input a list of paths as or the base directory from which
+to rename the paths. It then opens a temporary buffer in your default text
+editor with all the file paths. Once the buffer is saved and closed the script
+applies the changes made to each path. 
+
+Example usages: 
+    ./bulkrename *.txt
+    ./bulkrename ~/Downloads/*.pdf
+
+"""
+
+import argparse
+import os
+import tempfile
+
+
+def main():
+    """Run the script."""
+
+    args = parse_args()
+    paths = args.paths
+
+    if len(paths) == 1 and os.path.isdir(paths[0]):
+        base_directory = paths[0]
+        paths = [os.path.join(base_directory, filename) for filename 
+                 in os.listdir(base_directory)]
+
+    tempfile_name = tempfile.mktemp()
+
+    # Write the filenames to a temporary file for renaming
+    with open(tempfile_name, "w") as file_handle:
+        for path in paths:
+            file_handle.write(path + "\n")
+
+    # Open the file on the default text editor to allow renaming
+    os.system("$EDITOR " + tempfile_name)
+
+
+    with open(tempfile_name) as file_handle:
+        renamed_paths = [path.strip() for path in file_handle.readlines()]
+
+    # In order to avoid renaming the wrong file make sure all the file paths
+    # are specified before renaming, including those that don't require
+    # renaming. Otherwise, you can't know which line maps to which other line.
+    # Just to clarify, as an example, if you were to delete all lines except
+    # one from the buffer, how would you know which line it was supposed to
+    # rename?
+    if len(renamed_paths) != len(paths):
+        print("[!] Error: the number of renamed paths does match with the original.")
+        print("Important: files that don't require renaming must be left untouched.")
+        exit(1)
+
+    print("Renamed paths:")
+    for path, renamed_path in zip(paths, renamed_paths):
+        if path != renamed_path:
+            os.rename(path, renamed_path)
+            print(path, "->", renamed_path)
+
+
+def parse_args():
+    """Parse the CLI arguments."""
+
+    parser = argparse.ArgumentParser(
+        description="Renames in bulk all the files of a directory")
+
+    parser.add_argument("paths", nargs="+",
+            help="paths of the files to rename files OR path of the directory\
+                  which contains the files to rename.")
+
+    args = parser.parse_args()
+    return args
+
+if __name__ == "__main__":
+    main()
