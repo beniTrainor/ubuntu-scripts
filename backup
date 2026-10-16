@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [[ -z $1 ]]; then
+  exit 0
+fi
+
+filename="$(basename $1)"
+
+if [[ -d $1 ]]; then
+  output_filename="$filename-$(date -I)-$(shaten).zip"
+  zip -r --symlinks "$output_filename" $filename/*
+elif [[ -f $1 ]]; then
+  output_filename="${filename%.*}-$(date -I)-$(shaten).zip"
+  zip "$output_filename" "$filename"
+fi
