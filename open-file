@@ -1,0 +1,71 @@
+#!/bin/bash
+
+WEB_BROWSER="chromium"
+PDF_VIEWER="evince"
+VIDEO_PLAYER="vlc"
+AUDIO_PLAYER="mocp"
+IMG_VIEWER="eog"
+
+LOGFILE="$HOME/.local/state/open-file/open-file.log"
+
+filename=$1
+
+main() {
+
+  IFS="." read -r -a filename_parts <<< "$filename"
+
+  file_ext=${filename_parts[-1]}
+
+  printf "[%s] %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$filename" >> "$LOGFILE"
+
+  case "$file_ext" in
+    "html" | "md" | "markdown" | "webp" )
+      exec_cmd $WEB_BROWSER "$filename"
+      ;;
+    "url")
+      # A `url` file has the following structure:
+      # ```
+      # [InternetShortcut]
+      # URL=<URL>
+      # ```
+      url=$(tail -n 1 "$filename" | grep -o "http.*")
+      exec_cmd $WEB_BROWSER "$url"
+      ;;
+    "pdf")
+      exec_cmd $PDF_VIEWER "$filename"
+      ;;
+    "mkv" | "mp4" | "webm" | "avi" )
+      exec_cmd $VIDEO_PLAYER "$filename"
+      ;;
+    "mp3" )
+      #exec_cmd $AUDIO_PLAYER "$filename"
+
+      # TODO: add an exception/alternative to use programs that run on the same
+      # terminal and don't produce output (e.g., mocp)
+      $AUDIO_PLAYER "$filename"
+      ;;
+    "jpg" | "jpeg" | "png" | "gif" )
+      exec_cmd $IMG_VIEWER "$filename"
+      ;;
+    "odt" | "doc" | "docx" )
+      exec_cmd lowriter "$filename"
+       ;;
+    "ods" | "xls" | "xlsx" )
+      exec_cmd localc "$filename"
+        ;;
+    *)
+      echo "File extension not recognized."
+      exit 1
+      ;;
+  esac
+}
+
+exec_cmd() {
+
+  cmd=$1
+  arg=$2
+
+  "$cmd" "$arg" > /dev/null 2>&1 &
+}
+
+main "$@"
